@@ -15,7 +15,7 @@ from xgboost import plot_tree
 # Setup work
 #
 #######################
-host = 'localhost'
+host = 'localhost'xr5
 port = 9200
 base_url = "https://{}:{}/".format(host, port)
 auth = ('admin', 'admin')  # For testing only. Don't store credentials in code.

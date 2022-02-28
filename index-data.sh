@@ -6,6 +6,10 @@ usage()
 
 PRODUCTS_JSON_FILE="/workspace/search_with_machine_learning_course/opensearch/bbuy_products.json"
 QUERIES_JSON_FILE="/workspace/search_with_machine_learning_course/opensearch/bbuy_queries.json"
+#PRODUCTS_JSON_FILE="/workspace/search_with_machine_learning_course/week2/conf/bbuy_products.json"
+#QUERIES_JSON_FILE="/workspace/search_with_machine_learning_course/week2/conf/bbuy_queries.json"
+
+
 
 PRODUCTS_LOGSTASH_FILE="/workspace/search_with_machine_learning_course/logstash/index-bbuy.logstash"
 QUERIES_LOGSTASH_FILE="/workspace/search_with_machine_learning_course/logstash/index-bbuy-queries.logstash"

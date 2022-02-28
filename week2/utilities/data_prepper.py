@@ -234,23 +234,70 @@ class DataPrepper:
                                                 size=len(query_doc_ids), terms_field=terms_field)
         # IMPLEMENT_START --
         print("IMPLEMENT ME: __log_ltr_query_features: Extract log features out of the LTR:EXT response and place in a data frame")
-        # Loop over the hits structure returned by running `log_query` and then extract out the features from the response per query_id and doc id.  Also capture and return all query/doc pairs that didn't return features
+        # Loop over the hits structure returned by running `log_query` and then extract out the features from the response per query_id and doc id.  
+        # Also capture and return all query/doc pairs that didn't return features
+        #print(log_query)
+        print ("QUERY_ID: {}".format(query_id.iloc[0])) 
+        _query_id = query_id.iloc[0]
+
         # Your structure should look like the data frame below
         feature_results = {}
         feature_results["doc_id"] = []  # capture the doc id so we can join later
         feature_results["query_id"] = []  # ^^^
         feature_results["sku"] = []
         feature_results["salePrice"] = []
+        feature_results["regularPrice"] = []
         feature_results["name_match"] = []
-        rng = np.random.default_rng(12345)
-        for doc_id in query_doc_ids:
-            feature_results["doc_id"].append(doc_id)  # capture the doc id so we can join later
-            feature_results["query_id"].append(query_id)
-            feature_results["sku"].append(doc_id)  # ^^^
-            feature_results["salePrice"].append(rng.random())
-            feature_results["name_match"].append(rng.random())
-        frame = pd.DataFrame(feature_results)
-        return frame.astype({'doc_id': 'int64', 'query_id': 'int64', 'sku': 'int64'})
+        feature_results["name_phrase_match"] = []
+        feature_results["name_hyphens_min_df"] = []
+
+        try:
+            response = self.opensearch.search(body=log_query, index=self.index_name)
+        except RequestError as re:
+            print(re, log_query)
+        else:
+            if response and response['hits']['hits'] and len(response['hits']['hits']) > 0:
+                # we have a response with some hits
+                hits = response['hits']['hits']
+                print(hits)
+                for (idx, hit) in enumerate(hits):
+                    feature_results["doc_id"].append(hit['_id'])
+                    feature_results["query_id"].append(_query_id)
+                    feature_results["sku"].append(hit['_id']) 
+
+                    log_entries = hit['fields']['_ltrlog'][0]['log_entry']
+                    print("--LOG_ENTRIES---")
+                    print (log_entries)
+                    print("--END LOG_ENTRIES---")
+                    for (idx, log_entry) in enumerate(log_entries):
+                        name = log_entry["name"]
+                        value = log_entry.get("value", -1)
+
+                        feature_values = feature_results.get(name)
+                        if not feature_values:
+                            feature_values = []
+                        feature_values.append(value)
+                        feature_results[name] = feature_values
+
+                        
+                    #rng = np.random.default_rng(12345)
+                    #for doc_id in query_doc_ids:
+                    #    feature_results["doc_id"].append(doc_id)  # capture the doc id so we can join later
+                    #    feature_results["query_id"].append(query_id)
+                    #    feature_results["sku"].append(doc_id)  # ^^^
+                    #    feature_results["salePrice"].append(rng.random())
+                    #    feature_results["name_match"].append(rng.random())
+                    print("---FEATURE RESULTS---")
+                    print(feature_results)                    
+                    print("---END FEATURE RESULTS---")
+                    frame = pd.DataFrame(feature_results)
+                    #return frame.astype({'doc_id': 'int64', 'query_id': 'int64', 'sku': 'int64', 'salePrice': 'float64', 'regularPrice': 'float64', 'name_match': 'float64', 'name_phrase_match': 'float64', 'name_hyphens_min_df': 'float64'})
+                    return frame.astype({'doc_id': 'int64', 'query_id': 'int64', 'sku': 'int64'})
+            else:
+                no_results[key] = query_doc_ids
+                
+            return None
+
         # IMPLEMENT_END
 
     # Can try out normalizing data, but for XGb, you really don't have to since it is just finding splits
@@ -302,4 +349,5 @@ class DataPrepper:
     # Determine the number of clicks for this sku given a query (represented by the click group)
     def __num_clicks(self, all_skus_for_query, test_sku):
         print("IMPLEMENT ME: __num_clicks(): Return how many clicks the given sku received in the set of skus passed ")
-        return 0
+        num_clicks_arr = [x for x in all_skus_for_query if x==test_sku]
+        return len(num_clicks_arr)
