@@ -11,3 +11,6 @@ ln -s /home/gitpod/logstash-7.13.2 /workspace/logstash/logstash-7.13.2
 cd docker
 docker-compose up -d
 
+
+
+

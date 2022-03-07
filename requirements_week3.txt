@@ -13,3 +13,7 @@ graphviz
 matplotlib
 fasttext
 nltk
+gensim
+lxml
+bs4
+jupyterlab

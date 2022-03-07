@@ -13,7 +13,6 @@ input {
 }
   filter {
       xml {
-        source => "message"
         target => "xml_doc"
         store_xml => "false"
         remove_tag => ["<products>"]
