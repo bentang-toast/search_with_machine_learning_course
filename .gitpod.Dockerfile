@@ -22,7 +22,7 @@ RUN pip install kaggle
 RUN pip install nltk
 RUN pip install fasttext
 RUN pip install xgboost
-RUN pip install requests
+RUN pip install requcd                                                                                                                                                                                                                                   ests
 RUN pip install ipython
 RUN pip install urljoin
 RUN pip install matplotlib
