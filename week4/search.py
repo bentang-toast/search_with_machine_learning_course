@@ -12,6 +12,45 @@ import week4.utilities.ltr_utils as lu
 
 bp = Blueprint('search', __name__, url_prefix='/search')
 
+import re
+
+# Useful if you want to perform stemming.
+import nltk
+stemmer = nltk.stem.PorterStemmer()
+
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+from nltk.stem import SnowballStemmer
+from nltk.tokenize import word_tokenize
+
+nltk.download('stopwords')
+nltk.download('punkt')
+
+REPLACE_BY_SPACE_RE = re.compile('[/(){}\[\]\|@,;]')
+BAD_SYMBOLS_RE = re.compile('[^0-9a-z #+_]')
+PUNCTIONIONS_RE = re.compile('[^\w\s]')
+NUMERIC_RE = re.compile(" \d+")
+STOPWORDS = set(stopwords.words('english'))
+
+
+def clean_text(text):
+    """
+        text: a string
+        return: modified initial string
+    """
+    #stemmer = SnowballStemmer("english")
+    #text = BeautifulSoup(text, "lxml").text # HTML decoding
+    text = text.lower() #lowercase text
+    #text = text.replace('\n', ' ')  # replace new line with space
+    text = PUNCTIONIONS_RE.sub(' ', text)
+    text = REPLACE_BY_SPACE_RE.sub(' ', text) # replace REPLACE_BY_SPACE_RE symbols by space in text
+    text = BAD_SYMBOLS_RE.sub(' ', text) # delete symbols which are in a BAD_SYMBOLS_RE from text
+    #text = NUMERIC_RE.sub('', text) # delete NUMERIC character
+    #text = ' '.join(word for word in text.split() if word not in STOPWORDS) # delete stop worlds from text
+    words = word_tokenize(text)
+    text = ' '.join(stemmer.stem(word) for word in words) # use SnowballStemmer
+    return text
+
 
 # Process the filters requested by the user and return a tuple that is appropriate for use in: the query, URLs displaying the filter and the display of the applied filters
 # filters -- convert the URL GET structure into an OpenSearch filter query
@@ -58,7 +97,17 @@ def process_filters(filters_input):
 
 def get_query_category(user_query, query_class_model):
     print("IMPLEMENT ME: get_query_category")
-    return None
+    print(query_class_model)
+    categories = []
+    print(user_query)
+    normalized_query = clean_text(user_query)
+    print(normalized_query)
+    predicted_cats, probs = query_class_model.predict(normalized_query, k=10)
+    print(predicted_cats)
+    print(probs)
+    categories += [cat.replace('__label__','') for cat, prob in zip(predicted_cats, probs) if prob > 0.5]
+    print(categories)
+    return categories
 
 
 @bp.route('/query', methods=['GET', 'POST'])
@@ -121,7 +170,7 @@ def query():
             explain = True
         if filters_input:
             (filters, display_filters, applied_filters) = process_filters(filters_input)
-        model = request.args.get("model", "simiple")
+        model = request.args.get("model", "simple")
         if model == "simple_LTR":
             query_obj = qu.create_simple_baseline(user_query, click_prior, filters, sort, sortDir, size=500)
             query_obj = lu.create_rescore_ltr_query(user_query, query_obj, click_prior, ltr_model_name, ltr_store_name, rescore_size=500)
@@ -137,9 +186,16 @@ def query():
 
     query_class_model = current_app.config["query_model"]
     query_category = get_query_category(user_query, query_class_model)
+    print(query_category)
     if query_category is not None:
         print("IMPLEMENT ME: add this into the filters object so that it gets applied at search time.  This should look like your `term` filter from week 1 for department but for categories instead")
-    #print("query obj: {}".format(query_obj))
+        if "query" in query_obj and "bool" in query_obj["query"]:
+            query_obj["query"]["bool"]["filter"] = [{
+                "terms": {
+                    "categoryPathIds": query_category
+                }
+            }]
+    print("query obj: {}".format(query_obj))
     response = opensearch.search(body=query_obj, index=current_app.config["index_name"], explain=explain)
     # Postprocess results here if you so desire
 
